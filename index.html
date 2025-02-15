@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hawaii Mortgage Calculator</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <header class="bg-primary text-white py-3">
+        <div class="container">
+            <h1 class="h3 mb-0">Hawaii Mortgage Calculator</h1>
+        </div>
+    </header>
+
+    <main class="container my-4">
+        <div class="row">
+            <!-- Calculator Form -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h2 class="card-title h4">Mortgage Details</h2>
+                        <form id="mortgageForm">
+                            <div class="mb-3">
+                                <label for="homePrice" class="form-label">Home Price ($)</label>
+                                <input type="number" class="form-control" id="homePrice" required min="0" step="1000" value="500000">
+                            </div>
+                            <div class="mb-3">
+                                <label for="downPayment" class="form-label">Down Payment ($)</label>
+                                <input type="number" class="form-control" id="downPayment" required min="0" step="1000" value="100000">
+                            </div>
+                            <div class="mb-3">
+                                <label for="interestRate" class="form-label">Interest Rate (%)</label>
+                                <input type="number" class="form-control" id="interestRate" required min="0" step="0.125" value="6.5">
+                            </div>
+                            <div class="mb-3">
+                                <label for="loanTerm" class="form-label">Loan Term (years)</label>
+                                <select class="form-select" id="loanTerm" required>
+                                    <option value="30">30 years</option>
+                                    <option value="15">15 years</option>
+                                    <option value="10">10 years</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Calculate</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Display -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h2 class="card-title h4">Monthly Payment Breakdown</h2>
+                        <div id="results" class="d-none">
+                            <div class="mb-3">
+                                <h3 class="h5">Monthly Payment</h3>
+                                <p class="h2 text-primary" id="monthlyPayment">$0</p>
+                            </div>
+                            <div class="mb-3">
+                                <h3 class="h5">Loan Details</h3>
+                                <ul class="list-unstyled">
+                                    <li>Loan Amount: <span id="loanAmount">$0</span></li>
+                                    <li>Total Interest: <span id="totalInterest">$0</span></li>
+                                    <li>Total Cost: <span id="totalCost">$0</span></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-light py-3 mt-5">
+        <div class="container text-center">
+            <p class="mb-0">© 2025 Hawaii Mortgage Calculator</p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <style>
+        /* Core Styles */
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        main {
+            flex: 1;
+        }
+
+        /* Form Styles */
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        /* Responsive Adjustments */
+        @media (max-width: 768px) {
+            .col-md-6:last-child {
+                margin-top: 1rem;
+            }
+        }
+    </style>
+
+    <script>
+        // Constants and Configuration
+        const CONFIG = {
+            defaultValues: {
+                homePrice: 500000,
+                downPayment: 100000,
+                interestRate: 6.5,
+                loanTerm: 30
+            }
+        };
+
+        // Core Calculation Functions
+        const mortgageCalculator = {
+            calculateMonthlyPayment: (principal, annualRate, years) => {
+                const monthlyRate = (annualRate / 100) / 12;
+                const totalPayments = years * 12;
+                
+                if (monthlyRate === 0) return principal / totalPayments;
+                
+                const monthlyPayment = principal * 
+                    (monthlyRate * Math.pow(1 + monthlyRate, totalPayments)) / 
+                    (Math.pow(1 + monthlyRate, totalPayments) - 1);
+                
+                return monthlyPayment;
+            },
+            calculateTotalInterest: (monthlyPayment, principal, years) => {
+                return (monthlyPayment * years * 12) - principal;
+            }
+        };
+
+        // UI Handler Functions
+        const uiHandlers = {
+            handleFormSubmit: (event) => {
+                event.preventDefault();
+                
+                // Get form values
+                const homePrice = parseFloat(document.getElementById('homePrice').value);
+                const downPayment = parseFloat(document.getElementById('downPayment').value);
+                const interestRate = parseFloat(document.getElementById('interestRate').value);
+                const loanTerm = parseInt(document.getElementById('loanTerm').value);
+                
+                // Calculate loan amount
+                const principal = homePrice - downPayment;
+                
+                // Calculate monthly payment
+                const monthlyPayment = mortgageCalculator.calculateMonthlyPayment(
+                    principal,
+                    interestRate,
+                    loanTerm
+                );
+                
+                // Calculate total interest
+                const totalInterest = mortgageCalculator.calculateTotalInterest(
+                    monthlyPayment,
+                    principal,
+                    loanTerm
+                );
+                
+                // Update UI
+                document.getElementById('results').classList.remove('d-none');
+                document.getElementById('monthlyPayment').textContent = utils.formatCurrency(monthlyPayment);
+                document.getElementById('loanAmount').textContent = utils.formatCurrency(principal);
+                document.getElementById('totalInterest').textContent = utils.formatCurrency(totalInterest);
+                document.getElementById('totalCost').textContent = utils.formatCurrency(principal + totalInterest);
+            }
+        };
+
+        // Utility Functions
+        const utils = {
+            formatCurrency: (amount) => {
+                return new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: 'USD',
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }).format(amount);
+            }
+        };
+
+        // Event Listeners and Initialization
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('mortgageForm');
+            form.addEventListener('submit', uiHandlers.handleFormSubmit);
+        });
+    </script>
+</body>
+</html> 
