@@ -24,6 +24,18 @@
                     <div class="card-body">
                         <h2 class="card-title h4 mb-4">Mortgage Details</h2>
                         <form id="mortgageForm">
+                            <div class="mb-4">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label for="propertyNickname" class="form-label">Property Nickname</label>
+                                        <input type="text" class="form-control" id="propertyNickname" placeholder="e.g., Beach House, Mountain Condo">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label for="propertyAddress" class="form-label">Property Address</label>
+                                        <input type="text" class="form-control" id="propertyAddress" placeholder="Property Address">
+                                    </div>
+                                </div>
+                            </div>
                             <div class="two-column-form">
                                 <!-- Fields will automatically flow between columns -->
                                 <div class="mb-4">
@@ -144,6 +156,27 @@
                 </div>
             </div>
         </div>
+
+        <!-- Saved Profiles Section -->
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h2 class="card-title h4 mb-0">Saved Properties</h2>
+                            <button class="btn btn-success" id="saveProfileBtn">
+                                <i class="bi bi-plus-circle"></i> Save Current as Profile
+                            </button>
+                        </div>
+                        <div class="profiles-scroll-container">
+                            <div id="profilesList" class="d-flex gap-3">
+                                <!-- Profiles will be added here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
 
     <footer class="bg-light py-3 mt-5">
@@ -236,10 +269,53 @@
                 margin-top: 1rem;
             }
         }
+
+        /* Profile Styles */
+        .profiles-scroll-container {
+            overflow-x: auto;
+            padding: 1rem 0;
+            scrollbar-width: thin;
+            scrollbar-color: #6c757d #dee2e6;
+        }
+
+        .profiles-scroll-container::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .profiles-scroll-container::-webkit-scrollbar-track {
+            background: #dee2e6;
+            border-radius: 4px;
+        }
+
+        .profiles-scroll-container::-webkit-scrollbar-thumb {
+            background: #6c757d;
+            border-radius: 4px;
+        }
+
+        .profile-card {
+            min-width: 300px;
+            max-width: 300px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 1rem;
+            background: #fff;
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+
+        .profile-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .profile-card.active {
+            border-color: #0d6efd;
+            box-shadow: 0 0 0 2px #0d6efd20;
+        }
     </style>
 
     <script>
-        // Constants and Configuration
+        // Update Constants and Configuration
         const CONFIG = {
             defaultValues: {
                 homePrice: 500000,
@@ -248,12 +324,15 @@
                 loanTerm: 30,
                 hoaFees: 0,
                 insurance: 0
-            }
+            },
+            storageKey: 'mortgageProfiles'
         };
 
-        // State Management
+        // Enhanced State Management
         const state = {
-            expenses: []
+            expenses: [],
+            profiles: [],
+            activeProfileId: null
         };
 
         // Core Calculation Functions
@@ -477,87 +556,259 @@
             }
         };
 
+        // Add Profile Management
+        const profileManager = {
+            loadProfiles: () => {
+                const savedProfiles = localStorage.getItem(CONFIG.storageKey);
+                if (savedProfiles) {
+                    state.profiles = JSON.parse(savedProfiles);
+                    profileManager.renderProfiles();
+                }
+            },
+            
+            saveProfiles: () => {
+                localStorage.setItem(CONFIG.storageKey, JSON.stringify(state.profiles));
+                profileManager.renderProfiles();
+            },
+            
+            getCurrentProfileData: () => {
+                const formData = {
+                    id: Date.now().toString(),
+                    nickname: document.getElementById('propertyNickname')?.value || 'Unnamed Property',
+                    address: document.getElementById('propertyAddress')?.value || '',
+                    homePrice: utils.getNumericValue(document.getElementById('homePrice')),
+                    downPayment: utils.getNumericValue(document.getElementById('downPayment')),
+                    interestRate: utils.getNumericValue(document.getElementById('interestRate')),
+                    loanTerm: parseInt(document.getElementById('loanTerm').value),
+                    hoaFees: utils.getNumericValue(document.getElementById('hoaFees')),
+                    insurance: utils.getNumericValue(document.getElementById('insurance')),
+                    expenses: state.expenses.map(exp => ({...exp})),
+                    timestamp: new Date().toISOString()
+                };
+                
+                // Calculate key metrics for display
+                const principal = formData.homePrice - formData.downPayment;
+                const monthlyPayment = mortgageCalculator.calculateMonthlyPayment(
+                    principal,
+                    formData.interestRate,
+                    formData.loanTerm
+                );
+                
+                formData.monthlyPayment = monthlyPayment;
+                formData.totalMonthlyPayment = monthlyPayment + formData.hoaFees + formData.insurance +
+                    mortgageCalculator.calculateTotalMonthlyExpenses();
+                
+                return formData;
+            },
+            
+            saveCurrentAsProfile: () => {
+                const profileData = profileManager.getCurrentProfileData();
+                state.profiles.push(profileData);
+                state.activeProfileId = profileData.id;
+                profileManager.saveProfiles();
+            },
+            
+            loadProfile: (profileId) => {
+                const profile = state.profiles.find(p => p.id === profileId);
+                if (!profile) return;
+                
+                // Update form fields
+                if (document.getElementById('propertyNickname')) {
+                    document.getElementById('propertyNickname').value = profile.nickname;
+                }
+                if (document.getElementById('propertyAddress')) {
+                    document.getElementById('propertyAddress').value = profile.address;
+                }
+                document.getElementById('homePrice').value = utils.formatCurrency(profile.homePrice);
+                document.getElementById('downPayment').value = utils.formatCurrency(profile.downPayment);
+                document.getElementById('interestRate').value = profile.interestRate;
+                document.getElementById('loanTerm').value = profile.loanTerm;
+                document.getElementById('hoaFees').value = utils.formatCurrency(profile.hoaFees);
+                document.getElementById('insurance').value = utils.formatCurrency(profile.insurance);
+                
+                // Update expenses
+                state.expenses = profile.expenses.map(exp => ({...exp}));
+                uiHandlers.updateExpenseList();
+                
+                // Update active profile
+                state.activeProfileId = profileId;
+                profileManager.renderProfiles();
+                
+                // Trigger calculation
+                document.getElementById('mortgageForm').dispatchEvent(new Event('submit'));
+            },
+            
+            deleteProfile: (profileId) => {
+                state.profiles = state.profiles.filter(p => p.id !== profileId);
+                if (state.activeProfileId === profileId) {
+                    state.activeProfileId = null;
+                }
+                profileManager.saveProfiles();
+            },
+            
+            renderProfiles: () => {
+                const profilesList = document.getElementById('profilesList');
+                profilesList.innerHTML = '';
+                
+                state.profiles.forEach(profile => {
+                    const card = document.createElement('div');
+                    card.className = `profile-card ${profile.id === state.activeProfileId ? 'active' : ''}`;
+                    card.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h3 class="h5 mb-1">${profile.nickname}</h3>
+                                <small class="text-muted">${profile.address}</small>
+                            </div>
+                            <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); profileManager.deleteProfile('${profile.id}')">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                        <div class="mb-2">
+                            <strong>Monthly Payment:</strong><br>
+                            ${utils.formatCurrency(profile.totalMonthlyPayment)}
+                        </div>
+                        <div class="small text-muted">
+                            <div>Price: ${utils.formatCurrency(profile.homePrice)}</div>
+                            <div>Down: ${Math.round((profile.downPayment / profile.homePrice) * 100)}%</div>
+                            <div>Rate: ${profile.interestRate}%</div>
+                        </div>
+                    `;
+                    
+                    card.addEventListener('click', () => profileManager.loadProfile(profile.id));
+                    profilesList.appendChild(card);
+                });
+            }
+        };
+
         // CSV Handlers
         const csvHandlers = {
             exportToCSV: () => {
-                const formData = {
-                    homePrice: utils.parseCurrency(document.getElementById('homePrice').value),
-                    downPayment: utils.parseCurrency(document.getElementById('downPayment').value),
-                    interestRate: utils.parsePercentage(document.getElementById('interestRate').value),
-                    loanTerm: document.getElementById('loanTerm').value,
-                    hoaFees: utils.parseCurrency(document.getElementById('hoaFees').value),
-                    insurance: utils.parseCurrency(document.getElementById('insurance').value),
-                    expenses: state.expenses.map(exp => ({
-                        name: exp.name,
-                        amount: utils.parseCurrency(exp.amount),
-                        frequency: exp.frequency
-                    }))
-                };
+                let csvContent = [];
                 
-                const csvContent = [
-                    ['Field', 'Value'],
-                    ['Home Price', formData.homePrice],
-                    ['Down Payment', formData.downPayment],
-                    ['Interest Rate', formData.interestRate],
-                    ['Loan Term', formData.loanTerm],
-                    ['HOA Fees', formData.hoaFees],
-                    ['Insurance', formData.insurance],
-                    [''],
-                    ['Expense Name', 'Amount', 'Frequency'],
-                    ...formData.expenses.map(exp => [exp.name, exp.amount, exp.frequency])
-                ].map(row => row.join(',')).join('\n');
+                // Add all profiles to CSV
+                state.profiles.forEach(profile => {
+                    csvContent.push(['Profile_Start', profile.nickname]);
+                    csvContent.push(['ID', profile.id]);
+                    csvContent.push(['Nickname', profile.nickname]);
+                    csvContent.push(['Address', profile.address]);
+                    csvContent.push(['Home Price', profile.homePrice]);
+                    csvContent.push(['Down Payment', profile.downPayment]);
+                    csvContent.push(['Interest Rate', profile.interestRate]);
+                    csvContent.push(['Loan Term', profile.loanTerm]);
+                    csvContent.push(['HOA Fees', profile.hoaFees]);
+                    csvContent.push(['Insurance', profile.insurance]);
+                    
+                    if (profile.expenses.length > 0) {
+                        csvContent.push(['Custom_Expenses_Start']);
+                        profile.expenses.forEach(exp => {
+                            csvContent.push([exp.name, exp.amount, exp.frequency]);
+                        });
+                        csvContent.push(['Custom_Expenses_End']);
+                    }
+                    
+                    csvContent.push(['Profile_End']);
+                    csvContent.push(['']); // Empty line between profiles
+                });
                 
-                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const csvString = csvContent.map(row => row.join(',')).join('\n');
+                const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
-                link.download = 'mortgage_calculation.csv';
+                link.download = 'mortgage_profiles.csv';
                 link.click();
             },
+            
             importFromCSV: (file) => {
                 const reader = new FileReader();
                 reader.onload = (event) => {
                     const csv = event.target.result;
                     const lines = csv.split('\n');
+                    const profiles = [];
+                    let currentProfile = null;
+                    let inExpenses = false;
                     
-                    // Parse main form data
-                    const formData = {};
-                    for (let i = 1; i < 7; i++) {
-                        const [field, value] = lines[i].split(',');
-                        const key = field.toLowerCase().replace(/\s+/g, '');
-                        // Convert value to appropriate format for the UI
-                        if (['homeprice', 'downpayment', 'hoafees', 'insurance'].includes(key)) {
-                            formData[key] = utils.formatCurrency(parseFloat(value));
-                        } else if (key === 'interestrate') {
-                            formData[key] = parseFloat(value).toFixed(3);
-                        } else {
-                            formData[key] = value;
+                    lines.forEach(line => {
+                        const [key, value, frequency] = line.split(',').map(s => s.trim());
+                        
+                        if (key === 'Profile_Start') {
+                            currentProfile = {
+                                expenses: [],
+                                timestamp: new Date().toISOString()
+                            };
+                        } else if (key === 'Profile_End' && currentProfile) {
+                            // Calculate derived values
+                            const principal = currentProfile.homePrice - currentProfile.downPayment;
+                            currentProfile.monthlyPayment = mortgageCalculator.calculateMonthlyPayment(
+                                principal,
+                                currentProfile.interestRate,
+                                currentProfile.loanTerm
+                            );
+                            
+                            const totalMonthlyExpenses = currentProfile.expenses.reduce((total, exp) => {
+                                const amount = utils.parseCurrency(exp.amount);
+                                return total + (exp.frequency === 'monthly' ? amount : amount / 12);
+                            }, 0);
+                            
+                            currentProfile.totalMonthlyPayment = currentProfile.monthlyPayment + 
+                                currentProfile.hoaFees + currentProfile.insurance + totalMonthlyExpenses;
+                            
+                            profiles.push(currentProfile);
+                            currentProfile = null;
+                            inExpenses = false;
+                        } else if (currentProfile) {
+                            if (key === 'Custom_Expenses_Start') {
+                                inExpenses = true;
+                            } else if (key === 'Custom_Expenses_End') {
+                                inExpenses = false;
+                            } else if (inExpenses) {
+                                currentProfile.expenses.push({
+                                    name: key,
+                                    amount: utils.formatCurrency(parseFloat(value)),
+                                    frequency: frequency
+                                });
+                            } else {
+                                // Handle regular profile fields
+                                switch(key) {
+                                    case 'ID':
+                                        currentProfile.id = value;
+                                        break;
+                                    case 'Nickname':
+                                        currentProfile.nickname = value;
+                                        break;
+                                    case 'Address':
+                                        currentProfile.address = value;
+                                        break;
+                                    case 'Home Price':
+                                        currentProfile.homePrice = parseFloat(value);
+                                        break;
+                                    case 'Down Payment':
+                                        currentProfile.downPayment = parseFloat(value);
+                                        break;
+                                    case 'Interest Rate':
+                                        currentProfile.interestRate = parseFloat(value);
+                                        break;
+                                    case 'Loan Term':
+                                        currentProfile.loanTerm = parseInt(value);
+                                        break;
+                                    case 'HOA Fees':
+                                        currentProfile.hoaFees = parseFloat(value);
+                                        break;
+                                    case 'Insurance':
+                                        currentProfile.insurance = parseFloat(value);
+                                        break;
+                                }
+                            }
                         }
+                    });
+                    
+                    // Update state with imported profiles
+                    state.profiles = profiles;
+                    profileManager.saveProfiles();
+                    
+                    // Load the first profile if available
+                    if (profiles.length > 0) {
+                        profileManager.loadProfile(profiles[0].id);
                     }
-                    
-                    // Update form fields
-                    document.getElementById('homePrice').value = formData.homeprice;
-                    document.getElementById('downPayment').value = formData.downpayment;
-                    document.getElementById('interestRate').value = formData.interestrate;
-                    document.getElementById('loanTerm').value = formData.loanterm;
-                    document.getElementById('hoaFees').value = formData.hoafees;
-                    document.getElementById('insurance').value = formData.insurance;
-                    
-                    // Parse expenses
-                    state.expenses = [];
-                    for (let i = 9; i < lines.length; i++) {
-                        const [name, amount, frequency] = lines[i].split(',');
-                        if (name && amount && frequency) {
-                            state.expenses.push({
-                                name,
-                                amount: utils.formatCurrency(parseFloat(amount)),
-                                frequency
-                            });
-                        }
-                    }
-                    
-                    // Update UI
-                    uiHandlers.updateExpenseList();
-                    document.getElementById('mortgageForm').dispatchEvent(new Event('submit'));
                 };
                 reader.readAsText(file);
             }
@@ -596,6 +847,12 @@
                     csvHandlers.importFromCSV(e.target.files[0]);
                 }
             });
+
+            // Add profile management event listeners
+            document.getElementById('saveProfileBtn').addEventListener('click', profileManager.saveCurrentAsProfile);
+            
+            // Load saved profiles
+            profileManager.loadProfiles();
         });
     </script>
 </body>
