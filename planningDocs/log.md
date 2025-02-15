@@ -123,3 +123,103 @@ Confirmed decisions:
 3. Add form inputs and results display
 4. Test locally
 5. Setup GitHub repository
+
+## 2025-02-14 22:44:57 HST - Feature Enhancement Plan
+
+### Phase 2: Enhanced Features Implementation
+
+**New Features to Add:**
+1. Number Formatting Enhancement:
+   - Add automatic formatting for numeric inputs (e.g., "100000" → "100,000")
+   - Maintain numeric validation while showing formatted display
+   - Update all numeric inputs to use this enhancement
+
+2. Custom Expense Items:
+   - Add dynamic expense item addition/removal
+   - Include name, amount, and frequency (monthly/annual) for each expense
+   - Update total monthly calculation to include these expenses
+   - Store expenses in the configuration
+
+3. CSV Export/Import:
+   - Add export button to download current calculator state
+   - Implement import functionality for saved calculations
+   - Include all custom expenses in the export/import
+
+**Implementation Approach:**
+1. Add input masking library (Cleave.js) for number formatting
+2. Create dynamic expense management section
+3. Implement CSV handling using built-in JavaScript features
+4. Update UI to accommodate new features while maintaining mobile-first design
+
+**Technical Considerations:**
+- Use Cleave.js for input formatting (lightweight, well-maintained)
+- Store custom expenses in an array within the calculator state
+- Use FileReader API for CSV import
+- Implement Blob API for CSV export
+- Maintain backward compatibility with existing calculations
+
+## 2025-02-14 22:49:44 HST - Bug Fix: Number Scaling in CSV Import/Export
+
+**Issue Identified:**
+- Numbers are being incorrectly scaled down by 1000x during CSV import/export
+- Example: $500,000 is showing as $500
+- Affects both mortgage values and custom expenses
+
+**Root Cause:**
+- Number parsing is not properly handling the formatted currency strings
+- Need to properly strip currency formatting before parsing
+- Need to maintain full numeric precision during import/export
+
+**Fix Approach:**
+1. Update number parsing to properly handle currency formatting
+2. Ensure export uses raw numeric values instead of formatted strings
+3. Add validation to prevent magnitude loss
+4. Update CSV import to properly parse currency strings
+
+**Implementation Details:**
+- Add utility function for parsing currency strings
+- Store raw numeric values in state
+- Update CSV handlers to use raw values
+- Add validation checks for reasonable value ranges
+
+## 2025-02-14 22:55:06 HST - Feature Addition: Required Monthly Costs and Expense Breakdown
+
+**New Features:**
+1. Added Required Monthly Costs:
+   - HOA fees field in main calculator
+   - Insurance field in main calculator
+   - These are common required expenses for Hawaii properties
+
+2. Added Ranked Expense Breakdown:
+   - Shows all monthly costs in descending order
+   - Includes percentage of total monthly payment
+   - Helps visualize cost distribution
+   - Categories: Principal & Interest, HOA, Insurance, Custom Expenses
+
+**Implementation Details:**
+- Add new fields to main mortgage form
+- Create new section for ranked breakdown
+- Calculate percentages of total monthly payment
+- Sort expenses by amount
+- Include all costs in CSV export/import
+
+## 2025-02-14 23:00:44 HST - UI Improvements: Layout and Property Identification
+
+**New Features:**
+1. Property Identification Fields:
+   - Added nickname field for quick reference
+   - Added address field for property location
+   - Helps track multiple property calculations
+
+2. Improved Form Layout:
+   - Reorganized form into 2-column grid
+   - Reduced vertical space usage
+   - Better space utilization on larger screens
+   - Maintained mobile responsiveness
+
+**Implementation Details:**
+- Use Bootstrap grid system for 2-column layout
+- Add new fields to form and CSV export/import
+- Update state management to include property details
+- Maintain mobile-first approach (stack on small screens)
+- Update CSV handlers to include new fields

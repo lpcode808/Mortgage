@@ -6,6 +6,8 @@
     <title>Hawaii Mortgage Calculator</title>
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Cleave.js for number formatting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cleave.js/1.6.0/cleave.min.js"></script>
 </head>
 <body>
     <header class="bg-primary text-white py-3">
@@ -18,41 +20,92 @@
         <div class="row">
             <!-- Calculator Form -->
             <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <h2 class="card-title h4 mb-4">Mortgage Details</h2>
+                        <form id="mortgageForm">
+                            <div class="two-column-form">
+                                <!-- Fields will automatically flow between columns -->
+                                <div class="mb-4">
+                                    <label for="homePrice" class="form-label">Home Price ($)</label>
+                                    <input type="text" class="form-control number-format" id="homePrice" required value="500000">
+                                </div>
+                                <div class="mb-4">
+                                    <label for="downPayment" class="form-label">Down Payment ($)</label>
+                                    <input type="text" class="form-control number-format" id="downPayment" required value="100000">
+                                </div>
+                                <div class="mb-4">
+                                    <label for="interestRate" class="form-label">Interest Rate (%)</label>
+                                    <input type="text" class="form-control decimal-format" id="interestRate" required value="6.5">
+                                </div>
+                                <div class="mb-4">
+                                    <label for="loanTerm" class="form-label">Loan Term (years)</label>
+                                    <select class="form-select" id="loanTerm" required>
+                                        <option value="30">30 years</option>
+                                        <option value="15">15 years</option>
+                                        <option value="10">10 years</option>
+                                    </select>
+                                </div>
+                                <div class="mb-4">
+                                    <label for="hoaFees" class="form-label">Monthly HOA Fees ($)</label>
+                                    <input type="text" class="form-control number-format" id="hoaFees" required value="0">
+                                </div>
+                                <div class="mb-4">
+                                    <label for="insurance" class="form-label">Monthly Insurance ($)</label>
+                                    <input type="text" class="form-control number-format" id="insurance" required value="0">
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <button type="submit" class="btn btn-primary px-4">Calculate</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Custom Expenses Section -->
                 <div class="card">
                     <div class="card-body">
-                        <h2 class="card-title h4">Mortgage Details</h2>
-                        <form id="mortgageForm">
-                            <div class="mb-3">
-                                <label for="homePrice" class="form-label">Home Price ($)</label>
-                                <input type="number" class="form-control" id="homePrice" required min="0" step="1000" value="500000">
+                        <h2 class="card-title h4">Additional Expenses</h2>
+                        <form id="expenseForm" class="mb-3">
+                            <div class="row g-2">
+                                <div class="col">
+                                    <input type="text" class="form-control" id="expenseName" placeholder="Expense Name" required>
+                                </div>
+                                <div class="col">
+                                    <input type="text" class="form-control number-format" id="expenseAmount" placeholder="Amount" required>
+                                </div>
+                                <div class="col-auto">
+                                    <select class="form-select" id="expenseFrequency">
+                                        <option value="monthly">Monthly</option>
+                                        <option value="annual">Annual</option>
+                                    </select>
+                                </div>
+                                <div class="col-auto">
+                                    <button type="submit" class="btn btn-success">Add</button>
+                                </div>
                             </div>
-                            <div class="mb-3">
-                                <label for="downPayment" class="form-label">Down Payment ($)</label>
-                                <input type="number" class="form-control" id="downPayment" required min="0" step="1000" value="100000">
-                            </div>
-                            <div class="mb-3">
-                                <label for="interestRate" class="form-label">Interest Rate (%)</label>
-                                <input type="number" class="form-control" id="interestRate" required min="0" step="0.125" value="6.5">
-                            </div>
-                            <div class="mb-3">
-                                <label for="loanTerm" class="form-label">Loan Term (years)</label>
-                                <select class="form-select" id="loanTerm" required>
-                                    <option value="30">30 years</option>
-                                    <option value="15">15 years</option>
-                                    <option value="10">10 years</option>
-                                </select>
-                            </div>
-                            <button type="submit" class="btn btn-primary">Calculate</button>
                         </form>
+                        <div id="expenseList" class="list-group">
+                            <!-- Expenses will be added here dynamically -->
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- Results Display -->
             <div class="col-md-6">
-                <div class="card">
+                <div class="card mb-4">
                     <div class="card-body">
-                        <h2 class="card-title h4">Monthly Payment Breakdown</h2>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h2 class="card-title h4 mb-0">Monthly Payment Breakdown</h2>
+                            <div class="btn-group">
+                                <button class="btn btn-outline-primary btn-sm" id="exportBtn">Export CSV</button>
+                                <label class="btn btn-outline-primary btn-sm mb-0">
+                                    Import CSV
+                                    <input type="file" id="importBtn" accept=".csv" class="d-none">
+                                </label>
+                            </div>
+                        </div>
                         <div id="results" class="d-none">
                             <div class="mb-3">
                                 <h3 class="h5">Monthly Payment</h3>
@@ -65,6 +118,26 @@
                                     <li>Total Interest: <span id="totalInterest">$0</span></li>
                                     <li>Total Cost: <span id="totalCost">$0</span></li>
                                 </ul>
+                            </div>
+                            <div class="mb-3">
+                                <h3 class="h5">Monthly Payment Breakdown</h3>
+                                <div id="expenseBreakdown" class="list-group">
+                                    <!-- Ranked expenses will be added here -->
+                                </div>
+                            </div>
+                            <div id="expenseSummary" class="mb-3 d-none">
+                                <h3 class="h5">Additional Expenses</h3>
+                                <ul class="list-unstyled" id="expenseSummaryList">
+                                    <!-- Expense summary will be added here -->
+                                </ul>
+                                <div class="mt-2">
+                                    <strong>Total Monthly Expenses: </strong>
+                                    <span id="totalMonthlyExpenses">$0</span>
+                                </div>
+                                <div class="mt-2">
+                                    <strong>Total Monthly Payment (with expenses): </strong>
+                                    <span id="totalMonthlyWithExpenses" class="text-primary fw-bold">$0</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -94,6 +167,43 @@
         }
 
         /* Form Styles */
+        .two-column-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0 2rem;
+            position: relative;
+        }
+
+        .two-column-form::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 1px;
+            background-color: #dee2e6;
+            transform: translateX(-50%);
+        }
+
+        .form-label {
+            font-weight: normal;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+
+        .form-control, .form-select {
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            background-color: #fff;
+        }
+
+        .btn-primary {
+            padding: 0.75rem 2rem;
+            font-size: 1rem;
+        }
+
         input[type="number"] {
             -moz-appearance: textfield;
         }
@@ -103,8 +213,25 @@
             margin: 0;
         }
 
+        /* Expense List Styles */
+        .expense-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .expense-item button {
+            padding: 0.25rem 0.5rem;
+        }
+
         /* Responsive Adjustments */
         @media (max-width: 768px) {
+            .two-column-form {
+                grid-template-columns: 1fr;
+                gap: 0;
+            }
+            .two-column-form::after {
+                display: none;
+            }
             .col-md-6:last-child {
                 margin-top: 1rem;
             }
@@ -118,8 +245,15 @@
                 homePrice: 500000,
                 downPayment: 100000,
                 interestRate: 6.5,
-                loanTerm: 30
+                loanTerm: 30,
+                hoaFees: 0,
+                insurance: 0
             }
+        };
+
+        // State Management
+        const state = {
+            expenses: []
         };
 
         // Core Calculation Functions
@@ -138,6 +272,71 @@
             },
             calculateTotalInterest: (monthlyPayment, principal, years) => {
                 return (monthlyPayment * years * 12) - principal;
+            },
+            calculateTotalMonthlyExpenses: () => {
+                return state.expenses.reduce((total, expense) => {
+                    const amount = utils.parseCurrency(expense.amount);
+                    return total + (expense.frequency === 'monthly' ? amount : amount / 12);
+                }, 0);
+            },
+            generateExpenseBreakdown: (monthlyPayment, hoaFees, insurance) => {
+                // Get custom expenses
+                const customExpenses = state.expenses.map(expense => ({
+                    name: expense.name,
+                    amount: utils.parseCurrency(expense.amount) / (expense.frequency === 'annual' ? 12 : 1)
+                }));
+
+                // Create array of all monthly expenses
+                const allExpenses = [
+                    { name: 'Principal & Interest', amount: monthlyPayment },
+                    { name: 'HOA Fees', amount: hoaFees },
+                    { name: 'Insurance', amount: insurance },
+                    ...customExpenses
+                ].filter(exp => exp.amount > 0);
+
+                // Calculate total
+                const total = allExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+
+                // Sort by amount (descending) and add percentage
+                return allExpenses
+                    .map(exp => ({
+                        ...exp,
+                        percentage: (exp.amount / total) * 100
+                    }))
+                    .sort((a, b) => b.amount - a.amount);
+            }
+        };
+
+        // Utility Functions
+        const utils = {
+            formatCurrency: (amount) => {
+                return new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: 'USD',
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }).format(amount);
+            },
+            parseCurrency: (str) => {
+                // Remove currency symbols, commas, and spaces
+                const cleanStr = str.replace(/[$,\s]/g, '');
+                const num = parseFloat(cleanStr);
+                return isNaN(num) ? 0 : num;
+            },
+            parsePercentage: (str) => {
+                // Remove percentage symbol and spaces
+                const cleanStr = str.replace(/[%\s]/g, '');
+                const num = parseFloat(cleanStr);
+                return isNaN(num) ? 0 : num;
+            },
+            getNumericValue: (element) => {
+                const value = element.value;
+                if (element.classList.contains('number-format')) {
+                    return utils.parseCurrency(value);
+                } else if (element.classList.contains('decimal-format')) {
+                    return utils.parsePercentage(value);
+                }
+                return parseFloat(value);
             }
         };
 
@@ -146,11 +345,19 @@
             handleFormSubmit: (event) => {
                 event.preventDefault();
                 
-                // Get form values
-                const homePrice = parseFloat(document.getElementById('homePrice').value);
-                const downPayment = parseFloat(document.getElementById('downPayment').value);
-                const interestRate = parseFloat(document.getElementById('interestRate').value);
+                // Get form values using the new utility function
+                const homePrice = utils.getNumericValue(document.getElementById('homePrice'));
+                const downPayment = utils.getNumericValue(document.getElementById('downPayment'));
+                const interestRate = utils.getNumericValue(document.getElementById('interestRate'));
                 const loanTerm = parseInt(document.getElementById('loanTerm').value);
+                const hoaFees = utils.getNumericValue(document.getElementById('hoaFees'));
+                const insurance = utils.getNumericValue(document.getElementById('insurance'));
+                
+                // Validate inputs
+                if (homePrice < downPayment) {
+                    alert('Down payment cannot be greater than home price');
+                    return;
+                }
                 
                 // Calculate loan amount
                 const principal = homePrice - downPayment;
@@ -168,32 +375,227 @@
                     principal,
                     loanTerm
                 );
+
+                // Calculate total monthly expenses
+                const totalMonthlyExpenses = mortgageCalculator.calculateTotalMonthlyExpenses();
+                
+                // Generate expense breakdown
+                const expenseBreakdown = mortgageCalculator.generateExpenseBreakdown(
+                    monthlyPayment,
+                    hoaFees,
+                    insurance
+                );
                 
                 // Update UI
                 document.getElementById('results').classList.remove('d-none');
-                document.getElementById('monthlyPayment').textContent = utils.formatCurrency(monthlyPayment);
+                document.getElementById('monthlyPayment').textContent = utils.formatCurrency(monthlyPayment + hoaFees + insurance + totalMonthlyExpenses);
                 document.getElementById('loanAmount').textContent = utils.formatCurrency(principal);
                 document.getElementById('totalInterest').textContent = utils.formatCurrency(totalInterest);
                 document.getElementById('totalCost').textContent = utils.formatCurrency(principal + totalInterest);
+
+                // Update expense breakdown
+                const breakdownContainer = document.getElementById('expenseBreakdown');
+                breakdownContainer.innerHTML = expenseBreakdown
+                    .map(exp => `
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>${exp.name}</strong>
+                                <span class="ms-2">(${exp.percentage.toFixed(1)}%)</span>
+                            </div>
+                            <span>${utils.formatCurrency(exp.amount)}</span>
+                        </div>
+                    `)
+                    .join('');
+
+                // Update expense summary if there are expenses
+                if (state.expenses.length > 0) {
+                    document.getElementById('expenseSummary').classList.remove('d-none');
+                    document.getElementById('totalMonthlyExpenses').textContent = utils.formatCurrency(totalMonthlyExpenses);
+                    document.getElementById('totalMonthlyWithExpenses').textContent = 
+                        utils.formatCurrency(monthlyPayment + hoaFees + insurance + totalMonthlyExpenses);
+                }
+            },
+            handleExpenseSubmit: (event) => {
+                event.preventDefault();
+                
+                const name = document.getElementById('expenseName').value;
+                const amountInput = document.getElementById('expenseAmount');
+                const amount = utils.formatCurrency(utils.getNumericValue(amountInput));
+                const frequency = document.getElementById('expenseFrequency').value;
+                
+                // Add expense to state
+                state.expenses.push({ name, amount, frequency });
+                
+                // Update expense list
+                uiHandlers.updateExpenseList();
+                
+                // Clear form
+                event.target.reset();
+                
+                // Recalculate if results are showing
+                if (!document.getElementById('results').classList.contains('d-none')) {
+                    document.getElementById('mortgageForm').dispatchEvent(new Event('submit'));
+                }
+            },
+            updateExpenseList: () => {
+                const expenseList = document.getElementById('expenseList');
+                const expenseSummaryList = document.getElementById('expenseSummaryList');
+                
+                // Clear current lists
+                expenseList.innerHTML = '';
+                expenseSummaryList.innerHTML = '';
+                
+                state.expenses.forEach((expense, index) => {
+                    // Add to expense list
+                    const listItem = document.createElement('div');
+                    listItem.className = 'list-group-item expense-item';
+                    listItem.innerHTML = `
+                        <div>
+                            <strong>${expense.name}</strong>
+                            <span class="ms-2">${expense.amount} (${expense.frequency})</span>
+                        </div>
+                        <button class="btn btn-danger btn-sm" onclick="uiHandlers.removeExpense(${index})">
+                            Remove
+                        </button>
+                    `;
+                    expenseList.appendChild(listItem);
+                    
+                    // Add to summary list
+                    const summaryItem = document.createElement('li');
+                    summaryItem.textContent = `${expense.name}: ${expense.amount} (${expense.frequency})`;
+                    expenseSummaryList.appendChild(summaryItem);
+                });
+            },
+            removeExpense: (index) => {
+                state.expenses.splice(index, 1);
+                uiHandlers.updateExpenseList();
+                
+                // Recalculate if results are showing
+                if (!document.getElementById('results').classList.contains('d-none')) {
+                    document.getElementById('mortgageForm').dispatchEvent(new Event('submit'));
+                }
             }
         };
 
-        // Utility Functions
-        const utils = {
-            formatCurrency: (amount) => {
-                return new Intl.NumberFormat('en-US', {
-                    style: 'currency',
-                    currency: 'USD',
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                }).format(amount);
+        // CSV Handlers
+        const csvHandlers = {
+            exportToCSV: () => {
+                const formData = {
+                    homePrice: utils.parseCurrency(document.getElementById('homePrice').value),
+                    downPayment: utils.parseCurrency(document.getElementById('downPayment').value),
+                    interestRate: utils.parsePercentage(document.getElementById('interestRate').value),
+                    loanTerm: document.getElementById('loanTerm').value,
+                    hoaFees: utils.parseCurrency(document.getElementById('hoaFees').value),
+                    insurance: utils.parseCurrency(document.getElementById('insurance').value),
+                    expenses: state.expenses.map(exp => ({
+                        name: exp.name,
+                        amount: utils.parseCurrency(exp.amount),
+                        frequency: exp.frequency
+                    }))
+                };
+                
+                const csvContent = [
+                    ['Field', 'Value'],
+                    ['Home Price', formData.homePrice],
+                    ['Down Payment', formData.downPayment],
+                    ['Interest Rate', formData.interestRate],
+                    ['Loan Term', formData.loanTerm],
+                    ['HOA Fees', formData.hoaFees],
+                    ['Insurance', formData.insurance],
+                    [''],
+                    ['Expense Name', 'Amount', 'Frequency'],
+                    ...formData.expenses.map(exp => [exp.name, exp.amount, exp.frequency])
+                ].map(row => row.join(',')).join('\n');
+                
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'mortgage_calculation.csv';
+                link.click();
+            },
+            importFromCSV: (file) => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const csv = event.target.result;
+                    const lines = csv.split('\n');
+                    
+                    // Parse main form data
+                    const formData = {};
+                    for (let i = 1; i < 7; i++) {
+                        const [field, value] = lines[i].split(',');
+                        const key = field.toLowerCase().replace(/\s+/g, '');
+                        // Convert value to appropriate format for the UI
+                        if (['homeprice', 'downpayment', 'hoafees', 'insurance'].includes(key)) {
+                            formData[key] = utils.formatCurrency(parseFloat(value));
+                        } else if (key === 'interestrate') {
+                            formData[key] = parseFloat(value).toFixed(3);
+                        } else {
+                            formData[key] = value;
+                        }
+                    }
+                    
+                    // Update form fields
+                    document.getElementById('homePrice').value = formData.homeprice;
+                    document.getElementById('downPayment').value = formData.downpayment;
+                    document.getElementById('interestRate').value = formData.interestrate;
+                    document.getElementById('loanTerm').value = formData.loanterm;
+                    document.getElementById('hoaFees').value = formData.hoafees;
+                    document.getElementById('insurance').value = formData.insurance;
+                    
+                    // Parse expenses
+                    state.expenses = [];
+                    for (let i = 9; i < lines.length; i++) {
+                        const [name, amount, frequency] = lines[i].split(',');
+                        if (name && amount && frequency) {
+                            state.expenses.push({
+                                name,
+                                amount: utils.formatCurrency(parseFloat(amount)),
+                                frequency
+                            });
+                        }
+                    }
+                    
+                    // Update UI
+                    uiHandlers.updateExpenseList();
+                    document.getElementById('mortgageForm').dispatchEvent(new Event('submit'));
+                };
+                reader.readAsText(file);
             }
         };
 
-        // Event Listeners and Initialization
+        // Initialize
         document.addEventListener('DOMContentLoaded', () => {
-            const form = document.getElementById('mortgageForm');
-            form.addEventListener('submit', uiHandlers.handleFormSubmit);
+            // Initialize number formatting
+            document.querySelectorAll('.number-format').forEach(input => {
+                new Cleave(input, {
+                    numeral: true,
+                    numeralThousandsGroupStyle: 'thousand',
+                    prefix: '$'
+                });
+            });
+            
+            document.querySelectorAll('.decimal-format').forEach(input => {
+                new Cleave(input, {
+                    numeral: true,
+                    numeralDecimalScale: 3,
+                    numeralPositiveOnly: true
+                });
+            });
+            
+            // Add event listeners
+            const mortgageForm = document.getElementById('mortgageForm');
+            const expenseForm = document.getElementById('expenseForm');
+            const exportBtn = document.getElementById('exportBtn');
+            const importBtn = document.getElementById('importBtn');
+            
+            mortgageForm.addEventListener('submit', uiHandlers.handleFormSubmit);
+            expenseForm.addEventListener('submit', uiHandlers.handleExpenseSubmit);
+            exportBtn.addEventListener('click', csvHandlers.exportToCSV);
+            importBtn.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    csvHandlers.importFromCSV(e.target.files[0]);
+                }
+            });
         });
     </script>
 </body>
